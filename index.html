@@ -164,6 +164,8 @@
                         
                         <label class="block font-bold">Nama Pegawai</label>
                         <select id="regNama" required disabled class="w-full p-3 rounded-xl border bg-gray-100"><option value="">Pilih Cabang Dulu</option></select>
+                        <!-- Kotak input teks manual (Awalnya disembunyikan/hidden) -->
+                        <input type="text" id="regNamaManual" class="w-full p-3 rounded-xl border hidden" placeholder="Ketik nama lengkap Anda">
 
                         <label class="block font-bold">Divisi</label>
                         <input type="text" id="regDivisi" required placeholder="Contoh: Guru SD" class="w-full p-3 rounded-xl border">
@@ -204,6 +206,8 @@
                         
                         <label class="block font-bold">Nama Pegawai</label>
                         <select id="payNama" required disabled class="w-full p-3 rounded-xl border bg-gray-100"><option value="">Pilih Cabang Dulu</option></select>
+                        <!-- Kotak input teks manual (Awalnya disembunyikan/hidden) -->
+                        <input type="text" id="payNamaManual" class="w-full p-3 rounded-xl border hidden" placeholder="Ketik nama lengkap Anda">
 
                         <div class="bg-orange-50 p-6 rounded-2xl border-2 border-dashed border-orange-200 text-center">
                             <label class="block font-bold text-orange-800 mb-2">Simulasi Biaya</label>
@@ -255,18 +259,39 @@
             Object.keys(databasePegawai).sort().forEach(c => {
                 select.innerHTML += `<option value="${c}">${c}</option>`;
             });
+            // Tambahkan opsi "Lainnya" di paling bawah
+            select.innerHTML += `<option value="Lainnya">Lainnya</option>`;
         }
 
         function populatePegawai(asalId, namaId) {
             const asal = document.getElementById(asalId).value;
             const select = document.getElementById(namaId);
-            select.innerHTML = '<option value="" disabled selected>-- Pilih Nama --</option>';
-            if(databasePegawai[asal]) {
-                databasePegawai[asal].sort().forEach(n => {
-                    select.innerHTML += `<option value="${n}">${n}</option>`;
-                });
-                select.disabled = false;
-                select.classList.remove('bg-gray-100');
+            const manualInput = document.getElementById(namaId + 'Manual');
+
+            // Jika milih "Lainnya", sembunyikan dropdown dan munculkan input manual
+            if (asal === "Lainnya") {
+                select.classList.add('hidden');
+                select.required = false;
+                
+                manualInput.classList.remove('hidden');
+                manualInput.required = true;
+                manualInput.value = "";
+            } else {
+                // Jika milih cabang biasa, kembalikan ke awal
+                select.classList.remove('hidden');
+                select.required = true;
+                
+                manualInput.classList.add('hidden');
+                manualInput.required = false;
+
+                select.innerHTML = '<option value="" disabled selected>-- Pilih Nama --</option>';
+                if(databasePegawai[asal]) {
+                    databasePegawai[asal].sort().forEach(n => {
+                        select.innerHTML += `<option value="${n}">${n}</option>`;
+                    });
+                    select.disabled = false;
+                    select.classList.remove('bg-gray-100');
+                }
             }
         }
 
@@ -294,10 +319,14 @@
             const btn = document.getElementById('btnReg');
             btn.innerText = "Memproses... ⏳"; btn.disabled = true;
 
+            // Logika untuk menentukan nama mana yang diambil
+            const asalSekolah = document.getElementById('regAsal').value;
+            const namaPegawai = asalSekolah === 'Lainnya' ? document.getElementById('regNamaManual').value : document.getElementById('regNama').value;
+
             const data = {
                 action: 'register',
-                asalSekolah: document.getElementById('regAsal').value,
-                namaPegawai: document.getElementById('regNama').value,
+                asalSekolah: asalSekolah,
+                namaPegawai: namaPegawai,
                 divisi: document.getElementById('regDivisi').value,
                 whatsapp: document.getElementById('regWA').value,
                 jmlBerbayar: document.getElementById('regJmlBayar').value,
@@ -328,12 +357,16 @@
             const btn = document.getElementById('btnPay');
             btn.innerText = "Mengirim... ⏳"; btn.disabled = true;
 
+            // Logika untuk menentukan nama mana yang diambil (di payment tab)
+            const asalSekolah = document.getElementById('payAsal').value;
+            const namaPegawai = asalSekolah === 'Lainnya' ? document.getElementById('payNamaManual').value : document.getElementById('payNama').value;
+
             const reader = new FileReader();
             reader.onload = async function(e) {
                 const data = {
                     action: 'payment',
-                    asalSekolah: document.getElementById('payAsal').value,
-                    namaPegawai: document.getElementById('payNama').value,
+                    asalSekolah: asalSekolah,
+                    namaPegawai: namaPegawai,
                     fileName: fileInput.files[0].name,
                     mimeType: fileInput.files[0].type,
                     data: e.target.result.split(',')[1]
@@ -354,6 +387,21 @@
             document.getElementById('successModal').classList.add('hidden');
             document.getElementById('regForm').reset();
             document.getElementById('payForm').reset();
+            
+            // Kembalikan form nama pegawai seperti semula saat modal ditutup
+            ['reg', 'pay'].forEach(prefix => {
+                const select = document.getElementById(prefix + 'Nama');
+                const manual = document.getElementById(prefix + 'NamaManual');
+                select.innerHTML = '<option value="" disabled selected>Pilih Cabang Dulu</option>';
+                select.disabled = true;
+                select.classList.add('bg-gray-100');
+                select.classList.remove('hidden');
+                select.required = true;
+                
+                manual.classList.add('hidden');
+                manual.required = false;
+            });
+
             switchTab('home');
         }
     </script>
